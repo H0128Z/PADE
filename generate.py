@@ -2,7 +2,8 @@
 
 For each layout cell, the anchor SEM images of that cell are encoded once; the latent
 code z at a target condition is the bilinear interpolation of the anchor latent means
-over (focus, dose), and the target condition itself is supplied to the generator as theta.
+over (focus, dose), extended linearly outside the anchor range, and the target condition
+itself is supplied to the generator as theta.
 
 Expected files
   --mask_dir    <cell>.png                          layout mask (class index per pixel)
@@ -36,15 +37,17 @@ _T = transforms.Compose([transforms.Resize((256, 256)), transforms.ToTensor(),
 
 
 def interp_weights(v, grid):
-    """Linear interpolation neighbours (lo, hi, weight of hi) of v on a sorted 1-D grid;
-    values outside the grid are clamped to its ends."""
-    if v <= grid[0]:
+    """Linear interpolation neighbours (lo, hi, weight of hi) of v on a sorted 1-D grid.
+    Outside the grid, the end segment is extended linearly (weight < 0 or > 1)."""
+    if len(grid) == 1:
         return grid[0], grid[0], 0.0
-    if v >= grid[-1]:
-        return grid[-1], grid[-1], 0.0
-    for lo, hi in zip(grid[:-1], grid[1:]):
-        if lo <= v <= hi:
-            return lo, hi, (v - lo) / (hi - lo)
+    if v <= grid[0]:
+        lo, hi = grid[0], grid[1]
+    elif v >= grid[-1]:
+        lo, hi = grid[-2], grid[-1]
+    else:
+        lo, hi = next((lo, hi) for lo, hi in zip(grid[:-1], grid[1:]) if lo <= v <= hi)
+    return lo, hi, (v - lo) / (hi - lo)
 
 
 def bilinear_latent(mu, f, d, grid_f, grid_d):
