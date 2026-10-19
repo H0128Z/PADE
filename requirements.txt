@@ -1,0 +1,9 @@
+torch>=1.10
+torchvision
+lpips
+numpy
+scipy
+pandas
+pillow
+dominate>=2.3.1
+dill
